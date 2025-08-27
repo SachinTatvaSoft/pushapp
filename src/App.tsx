@@ -1,9 +1,10 @@
 import "./App.css";
 import { useFCM } from "./hooks/useFCM";
+import { usePWAInstall } from "./hooks/usePWAInstall";
 
 function App() {
+  const { isInstallable, promptInstall } = usePWAInstall();
   const fcm_token = useFCM();
-
   return (
     <div
       style={{
@@ -27,7 +28,9 @@ function App() {
           marginBottom: "1.5rem",
         }}
       >
-        <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem", color: "black" }}>
+        <h2
+          style={{ fontSize: "1.2rem", marginBottom: "0.5rem", color: "black" }}
+        >
           FCM Token
         </h2>
         <p
@@ -44,6 +47,22 @@ function App() {
           {fcm_token ?? "Not yet generated"}
         </p>
       </div>
+      {isInstallable && (
+        <button
+          style={{
+            padding: "10px 20px",
+            fontSize: "1rem",
+            cursor: "pointer",
+            borderRadius: "8px",
+            border: "none",
+            background: "#16a34a",
+            color: "#fff",
+          }}
+          onClick={promptInstall}
+        >
+          Install App
+        </button>
+      )}
     </div>
   );
 }
