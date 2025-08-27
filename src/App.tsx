@@ -15,7 +15,7 @@ function App() {
       }}
     >
       <h1 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>
-        Push App Demo
+        Push Notification App
       </h1>
 
       <div
@@ -27,7 +27,7 @@ function App() {
           marginBottom: "1.5rem",
         }}
       >
-        <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>
+        <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem", color: "black" }}>
           FCM Token
         </h2>
         <p
