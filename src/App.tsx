@@ -95,10 +95,22 @@ function App() {
               textAlign: "center",
             }}
           >
-            <h2 style={{ fontSize: "1.3rem", marginBottom: "1rem" }}>
+            <h2
+              style={{
+                fontSize: "1.3rem",
+                marginBottom: "1rem",
+                color: "black",
+              }}
+            >
               Enable Notifications?
             </h2>
-            <p style={{ marginBottom: "1.5rem", fontSize: "0.95rem" }}>
+            <p
+              style={{
+                marginBottom: "1.5rem",
+                fontSize: "0.95rem",
+                color: "black",
+              }}
+            >
               We’d like to send you updates and alerts. Do you want to enable
               push notifications?
             </p>
