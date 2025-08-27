@@ -23,30 +23,33 @@ const messaging: Messaging = getMessaging(app);
 export function useFCM() {
   const [token, setToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    const requestPermissionAndToken = async () => {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          console.log("Permission not granted for notifications");
-          return;
-        }
-
-        const token = await getToken(messaging, {
-          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-        });
-
-        if (token) {
-          console.log("FCM Token:", token);
-          setToken(token);
-        } else {
-          console.log("Token generation failed.");
-        }
-      } catch (err) {
-        console.error("Error getting FCM token", err);
+  const requestPermissionAndToken = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.log("Permission not granted for notifications");
+        return;
       }
-    };
 
+      const registration = await navigator.serviceWorker.ready;
+
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: registration,
+      });
+
+      if (token) {
+        console.log("FCM Token:", token);
+        setToken(token);
+      } else {
+        console.log("Token generation failed.");
+      }
+    } catch (err) {
+      console.error("Error getting FCM token", err);
+    }
+  };
+
+  useEffect(() => {
     requestPermissionAndToken();
 
     // Foreground listener
@@ -54,6 +57,7 @@ export function useFCM() {
       console.log("Foreground message:", payload);
       new Notification(payload.notification?.title ?? "Notification", {
         body: payload.notification?.body,
+        icon: "/vite.svg",
       });
     });
 
