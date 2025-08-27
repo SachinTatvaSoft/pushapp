@@ -1,7 +1,6 @@
 import "./App.css";
 import { useFCM } from "./hooks/useFCM";
 import { usePWAInstall } from "./hooks/usePWAInstall";
-import { useState } from "react";
 
 function App() {
   const { isInstallable, promptInstall } = usePWAInstall();
