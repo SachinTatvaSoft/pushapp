@@ -26,7 +26,7 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-navigator.serviceWorker.ready.then(function (registration) {
+navigator.serviceWorker.ready.then(function (_registration) {
   console.log("Service Worker is ready");
 });
 
