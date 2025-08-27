@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import {
   getMessaging,
   getToken,
+  deleteToken,
   onMessage,
   type Messaging,
 } from "firebase/messaging";
@@ -22,37 +23,80 @@ const messaging: Messaging = getMessaging(app);
 
 export function useFCM() {
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showDialog, setShowDialog] = useState<boolean>(false);
 
-  const requestPermissionAndToken = async () => {
+  const generateToken = async () => {
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        console.log("Permission not granted for notifications");
-        return;
-      }
-
+      setLoading(true);
       const registration = await navigator.serviceWorker.ready;
-
-      const token = await getToken(messaging, {
+      const newToken = await getToken(messaging, {
         vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
         serviceWorkerRegistration: registration,
       });
-
-      if (token) {
-        console.log("FCM Token:", token);
-        setToken(token);
-      } else {
-        console.log("Token generation failed.");
+      if (newToken) {
+        console.log("FCM Token generated:", newToken);
+        setToken(newToken);
+        localStorage.setItem("fcm_token", newToken);
       }
     } catch (err) {
-      console.error("Error getting FCM token", err);
+      console.error("Error generating FCM token", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeToken = async () => {
+    try {
+      const existingToken = await getToken(messaging);
+      if (existingToken) {
+        await deleteToken(messaging);
+        console.log("FCM Token removed due to permission change");
+      }
+      setToken(null);
+      localStorage.removeItem("fcm_token");
+    } catch (err) {
+      console.error("Error removing token", err);
     }
   };
 
   useEffect(() => {
-    requestPermissionAndToken();
+    const permission = Notification.permission;
+    const alreadyAsked = localStorage.getItem("notification_ask");
+    const storedToken = localStorage.getItem("fcm_token");
 
-    // Foreground listener
+    if (permission === "default" && !alreadyAsked) {
+      setShowDialog(true);
+    } else if (permission === "granted") {
+      if (storedToken) {
+        setToken(storedToken);
+      } else {
+        generateToken();
+      }
+    } else if (permission === "denied") {
+      removeToken();
+    }
+  }, []);
+
+  const handleDialogConfirm = async () => {
+    setShowDialog(false);
+    localStorage.setItem("notification_ask", "true");
+
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        generateToken();
+      } else {
+        removeToken();
+      }
+    } else if (Notification.permission === "granted") {
+      generateToken();
+    } else if (Notification.permission === "denied") {
+      removeToken();
+    }
+  };
+
+  useEffect(() => {
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Foreground message:", payload);
       new Notification(payload.notification?.title ?? "Notification", {
@@ -60,9 +104,8 @@ export function useFCM() {
         icon: "/vite.svg",
       });
     });
-
     return () => unsubscribe();
   }, []);
 
-  return token;
+  return { token, loading, showDialog, handleDialogConfirm, setShowDialog };
 }
