@@ -22,11 +22,11 @@ let messaging = firebase.messaging();
 messaging.onBackgroundMessage(function (payload) {
   console.log("Background message in SW:", payload);
 
-  const notificationTitle = payload?.notification?.title || "";
+  const notificationTitle =
+    payload.notification?.title || payload.data?.title || "Notification";
   const notificationOptions = {
-    body: payload?.notification?.body || "",
-    icon: "/vite.svg",
+    body: payload.notification?.body || payload.data?.body || "",
+    icon: payload.notification?.icon || payload.data?.icon || "/vite.svg",
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
 });

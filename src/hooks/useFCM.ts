@@ -99,9 +99,12 @@ export function useFCM() {
   useEffect(() => {
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Foreground message:", payload);
-      new Notification(payload.notification?.title ?? "Notification", {
-        body: payload.notification?.body,
-        icon: "/vite.svg",
+      const title = payload.notification?.title || payload.data?.title || "Notification";
+      const body = payload.notification?.body || payload.data?.body || "";
+      const icon = payload.notification?.icon || payload.data?.icon || "/vite.svg";
+      new Notification(title, {
+        body,
+        icon,
       });
     });
     return () => unsubscribe();
