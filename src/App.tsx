@@ -1,6 +1,11 @@
 import "./App.css";
 import { useFCM } from "./hooks/useFCM";
 import { usePWAInstall } from "./hooks/usePWAInstall";
+import { NotificationModal } from "./components/NotificationModal";
+import { toast, ToastContainer, type Id as ToastId } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { FCMToast } from "./components/FCMToast";
+import { useEffect } from "react";
 
 function App() {
   const { isInstallable, promptInstall } = usePWAInstall();
@@ -11,6 +16,24 @@ function App() {
     handleDialogConfirm,
     setShowDialog,
   } = useFCM();
+
+  useEffect(() => {
+    const handler = (event: any) => {
+      const payload = event.detail;
+
+      let toastId: ToastId | undefined;
+      toastId = toast(() => (
+        <FCMToast
+          title={payload.notification?.title}
+          body={payload.notification?.body}
+          icon="/vite.svg"
+        />
+      ));
+    };
+
+    window.addEventListener("fcm-message", handler);
+    return () => window.removeEventListener("fcm-message", handler);
+  }, []);
 
   return (
     <div
@@ -72,77 +95,24 @@ function App() {
         </button>
       )}
 
-      {showDialog && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              padding: "2rem",
-              borderRadius: "12px",
-              maxWidth: "400px",
-              textAlign: "center",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "1.3rem",
-                marginBottom: "1rem",
-                color: "black",
-              }}
-            >
-              Enable Notifications?
-            </h2>
-            <p
-              style={{
-                marginBottom: "1.5rem",
-                fontSize: "0.95rem",
-                color: "black",
-              }}
-            >
-              We’d like to send you updates and alerts. Do you want to enable
-              push notifications?
-            </p>
-            <button
-              style={{
-                background: "#007bff",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.6rem 1.2rem",
-                marginRight: "0.5rem",
-                cursor: "pointer",
-              }}
-              onClick={handleDialogConfirm}
-            >
-              Yes, Enable
-            </button>
-            <button
-              style={{
-                background: "#ddd",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.6rem 1.2rem",
-                cursor: "pointer",
-              }}
-              onClick={() => setShowDialog(false)}
-            >
-              Not Now
-            </button>
-          </div>
-        </div>
-      )}
+      <NotificationModal
+        visible={showDialog}
+        onConfirm={handleDialogConfirm}
+        onCancel={() => setShowDialog(false)}
+      />
+
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={true}
+        newestOnTop={true}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable={false}
+        pauseOnHover
+        toastClassName={() => "transparent-toast"}
+      />
     </div>
   );
 }

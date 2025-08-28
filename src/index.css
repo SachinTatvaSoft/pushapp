@@ -66,3 +66,25 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+transparent-toast {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+}
+
+.transparent-toast:focus,
+.transparent-toast:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.Toastify__toast-body {
+  margin: 0;
+  padding: 0;
+  pointer-events: auto;
+}

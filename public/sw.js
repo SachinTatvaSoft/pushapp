@@ -20,11 +20,11 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log("Background FCM:", payload);
 
-  self.registration.showNotification(
-    payload?.notification?.title || "Notification",
-    {
-      body: payload?.notification?.body || "",
-      icon: "/vite.svg",
-    }
-  );
+  const notificationTitle = payload.notification?.title || "Notification";
+  const notificationOptions = {
+    body: payload.notification?.body || "",
+    icon: "/vite.svg",
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
