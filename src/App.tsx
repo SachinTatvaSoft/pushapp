@@ -2,7 +2,7 @@ import "./App.css";
 import { useFCM } from "./hooks/useFCM";
 import { usePWAInstall } from "./hooks/usePWAInstall";
 import { NotificationModal } from "./components/NotificationModal";
-import { toast, ToastContainer, type Id as ToastId } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FCMToast } from "./components/FCMToast";
 import { useEffect } from "react";
@@ -21,8 +21,7 @@ function App() {
     const handler = (event: any) => {
       const payload = event.detail;
 
-      let toastId: ToastId | undefined;
-      toastId = toast(() => (
+      toast(() => (
         <FCMToast
           title={payload.notification?.title}
           body={payload.notification?.body}
