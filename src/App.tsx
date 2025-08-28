@@ -20,7 +20,7 @@ function App() {
           }}
           onClick={promptInstall}
         >
-          📲 Install App
+          Install App
         </button>
       )}
     </>

@@ -51,7 +51,7 @@ export function useFCM() {
 
     // Foreground listener
     const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("📩 Foreground message:", payload);
+      console.log("Foreground message:", payload);
       new Notification(payload.notification?.title ?? "Notification", {
         body: payload.notification?.body,
       });
