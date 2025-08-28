@@ -18,22 +18,8 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-let app;
-let messaging: Messaging | undefined = undefined;
-try {
-  app = initializeApp(firebaseConfig);
-  if ("serviceWorker" in navigator && "Notification" in window) {
-    messaging = getMessaging(app);
-  } else {
-    console.warn(
-      "Browser does not support service workers or notifications. Messaging will be disabled."
-    );
-  }
-} catch (err) {
-  console.error("Error initializing Firebase or Messaging:", err);
-  app = undefined;
-  messaging = undefined;
-}
+const app = initializeApp(firebaseConfig);
+const messaging: Messaging = getMessaging(app);
 
 export function useFCM() {
   const [token, setToken] = useState<string | null>(null);
@@ -43,13 +29,7 @@ export function useFCM() {
   const generateToken = async () => {
     try {
       setLoading(true);
-      if (!messaging) {
-        throw new Error("Messaging is not supported in this browser.");
-      }
       const registration = await navigator.serviceWorker.ready;
-      if (!registration) {
-        throw new Error("Service worker registration not found.");
-      }
       const newToken = await getToken(messaging, {
         vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
         serviceWorkerRegistration: registration,
@@ -68,11 +48,6 @@ export function useFCM() {
 
   const removeToken = async () => {
     try {
-      if (!messaging) {
-        setToken(null);
-        localStorage.removeItem("fcm_token");
-        return;
-      }
       const existingToken = await getToken(messaging);
       if (existingToken) {
         await deleteToken(messaging);
@@ -80,14 +55,8 @@ export function useFCM() {
       }
       setToken(null);
       localStorage.removeItem("fcm_token");
-    } catch (err: any) {
-      if (err.code === "messaging/permission-blocked") {
-        setToken(null);
-        localStorage.removeItem("fcm_token");
-        console.warn("Notification permission blocked, token removed locally.");
-      } else {
-        console.error("Error removing token", err);
-      }
+    } catch (err) {
+      console.error("Error removing token", err);
     }
   };
 
@@ -128,20 +97,14 @@ export function useFCM() {
   };
 
   useEffect(() => {
-    if (
-      typeof messaging !== "undefined" &&
-      "serviceWorker" in navigator &&
-      "Notification" in window
-    ) {
-      onMessage(messaging, (payload) => {
-        console.log("Foreground message:", payload);
-        new Notification(payload.notification?.title ?? "Notification", {
-          body: payload.notification?.body,
-          icon: "/vite.svg",
-        });
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("Foreground message:", payload);
+      new Notification(payload.notification?.title ?? "Notification", {
+        body: payload.notification?.body,
+        icon: "/vite.svg",
       });
-    }
-    return () => {};
+    });
+    return () => unsubscribe();
   }, []);
 
   return { token, loading, showDialog, handleDialogConfirm, setShowDialog };
