@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import {
   getMessaging,
   getToken,
+  deleteToken,
   onMessage,
   type Messaging,
 } from "firebase/messaging";
@@ -17,48 +18,131 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging: Messaging = getMessaging(app);
+let app;
+let messaging: Messaging | undefined = undefined;
+try {
+  app = initializeApp(firebaseConfig);
+  if ("serviceWorker" in navigator && "Notification" in window) {
+    messaging = getMessaging(app);
+  } else {
+    console.warn(
+      "Browser does not support service workers or notifications. Messaging will be disabled."
+    );
+  }
+} catch (err) {
+  console.error("Error initializing Firebase or Messaging:", err);
+  app = undefined;
+  messaging = undefined;
+}
 
 export function useFCM() {
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showDialog, setShowDialog] = useState<boolean>(false);
+
+  const generateToken = async () => {
+    try {
+      setLoading(true);
+      if (!messaging) {
+        throw new Error("Messaging is not supported in this browser.");
+      }
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration) {
+        throw new Error("Service worker registration not found.");
+      }
+      const newToken = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: registration,
+      });
+      if (newToken) {
+        console.log("FCM Token generated:", newToken);
+        setToken(newToken);
+        localStorage.setItem("fcm_token", newToken);
+      }
+    } catch (err) {
+      console.error("Error generating FCM token", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeToken = async () => {
+    try {
+      if (!messaging) {
+        setToken(null);
+        localStorage.removeItem("fcm_token");
+        return;
+      }
+      const existingToken = await getToken(messaging);
+      if (existingToken) {
+        await deleteToken(messaging);
+        console.log("FCM Token removed due to permission change");
+      }
+      setToken(null);
+      localStorage.removeItem("fcm_token");
+    } catch (err: any) {
+      if (err.code === "messaging/permission-blocked") {
+        setToken(null);
+        localStorage.removeItem("fcm_token");
+        console.warn("Notification permission blocked, token removed locally.");
+      } else {
+        console.error("Error removing token", err);
+      }
+    }
+  };
 
   useEffect(() => {
-    const requestPermissionAndToken = async () => {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          console.log("Permission not granted for notifications");
-          return;
-        }
+    const permission = Notification.permission;
+    const alreadyAsked = localStorage.getItem("notification_ask");
+    const storedToken = localStorage.getItem("fcm_token");
 
-        const token = await getToken(messaging, {
-          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-        });
-
-        if (token) {
-          console.log("FCM Token:", token);
-          setToken(token);
-        } else {
-          console.log("Token generation failed.");
-        }
-      } catch (err) {
-        console.error("Error getting FCM token", err);
+    if (permission === "default" && !alreadyAsked) {
+      setShowDialog(true);
+    } else if (permission === "granted") {
+      if (storedToken) {
+        setToken(storedToken);
+      } else {
+        generateToken();
       }
-    };
-
-    requestPermissionAndToken();
-
-    // Foreground listener
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("Foreground message:", payload);
-      new Notification(payload.notification?.title ?? "Notification", {
-        body: payload.notification?.body,
-      });
-    });
-
-    return () => unsubscribe();
+    } else if (permission === "denied") {
+      removeToken();
+    }
   }, []);
 
-  return token;
+  const handleDialogConfirm = async () => {
+    setShowDialog(false);
+    localStorage.setItem("notification_ask", "true");
+
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        generateToken();
+      } else {
+        removeToken();
+      }
+    } else if (Notification.permission === "granted") {
+      generateToken();
+    } else if (Notification.permission === "denied") {
+      removeToken();
+    }
+  };
+
+  useEffect(() => {
+    if (
+      typeof messaging !== "undefined" &&
+      "serviceWorker" in navigator &&
+      "Notification" in window
+    ) {
+      onMessage(messaging, (payload) => {
+        console.log("Foreground message:", payload);
+        new Notification(payload.notification?.title ?? "Notification", {
+          body: payload.notification?.body,
+          icon: "/vite.svg",
+        });
+      });
+    }
+    return () => {};
+  }, []);
+
+  return { token, loading, showDialog, handleDialogConfirm, setShowDialog };
 }
